@@ -1,15 +1,14 @@
-path <- "/home/manish/Desktop/IH2017/Here/dataset/"
+path <- #set path
 setwd(path)
 
 # Load data and libraries -------------------------------------------------
 
 library(data.table)
 library(gbm)
+library(ranger)
 
 train <- fread("train.csv")
 test <- fread("test.csv")
-offline <- fread("offline_testcase.csv")
-
 
 # Encode as integer -------------------------------------------------------
 
@@ -22,7 +21,6 @@ setnames(train, 'SignFacing (Target)', 'Target')
 
 # Model Training ----------------------------------------------------------
 
-library(ranger)
 rf.model <- ranger(Target ~ .-Id, data = train, num.trees = 500, mtry = 3,probability = T)
 rf.model
 
