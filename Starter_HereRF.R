@@ -30,4 +30,4 @@ sub_RF <- as.data.table(pred$predictions)
 sub_RF <- cbind(test$Id, sub_RF)
 setnames(sub_RF,"V1","Id")
 
-fwrite(sub_RF,"starterRF.csv") #LB = ~0.99
+fwrite(sub_RF,"starterRF.csv") #LB = 99.XXX
