@@ -1,0 +1,239 @@
+---
+title: "R Notebook"
+output:
+  html_document: default
+  html_notebook: default
+---
+
+### Introduction
+
+This notebook will help you understand the behaviour of Hotstar users in the given data set. Using, simple bar plots you will understand how the target variable (segment) fairs against given features.
+
+Along with exploration, you will learn how to work with lists in R, which I believe is quite tricky!
+To dive deep, check starter scripts. 
+
+### Load Libraries and Data set
+```{r}
+library(data.table)
+library(jsonlite)
+library(ggplot2)
+
+train <- fromJSON("train_data.json")
+
+train_data <- data.table(ID = unlist(names(train)))
+train_data[, `:=` (genres = unlist(lapply(train, '[',1)),
+                   titles = unlist(lapply(train, '[',2)),
+                   cities = unlist(lapply(train, '[', 3)),
+                   segment = unlist(lapply(train, '[',4)),
+                   dow = unlist(lapply(train, '[',5)),
+                   tod = unlist(lapply(train, '[', 6))
+)]
+
+test <- fromJSON("test_data.json")
+
+test_data <- data.table(ID  = unlist(names(test)))
+test_data[,`:=` (genres = unlist(lapply(test, '[',1)),
+                 titles = unlist(lapply(test, '[',2)),
+                 tod = unlist(lapply(test, '[', 3)),
+                 cities = unlist(lapply(test, '[',4)),
+                 dow = unlist(lapply(test, '[',5))
+)]
+
+
+rm(train,test)
+```
+
+
+### Exploring Data
+```{r}
+# Look at data
+
+head(train_data)
+
+```
+
+```{r}
+## Encode Target Variable
+train_data[, segment := ifelse(segment == 'neg',0,1)]
+train_data[,.N/nrow(train_data), segment]
+```
+
+From the table above, we learn that the target variable is imbalanced. 
+
+```{r}
+
+#plot segment
+ggplot(train_data,aes(segment))+geom_bar(color='black',fill='tomato')+
+  geom_text(stat='count',aes(label=..count..),vjust=-0.5)
+
+```
+
+Lets see which genres are the most popular among hotstar users.
+
+```{r}
+
+# plot genres
+# To plot genres we need to extract values from the data.
+
+train_data[,gen1 := lapply(genres, function(k) str_extract_all(string = k, pattern = "[[:alpha:]]+"))]
+train_data[,gen1 := lapply(gen1, unlist, use.names=F)]
+
+genres <- table(unlist(train_data$gen1))
+genres <- as.data.table(genres)
+setnames(genres, c("V1","N"), c("Name","Count"))
+genres <- genres[order(-Count)]
+
+ggplot(genres, aes(x = reorder(Name, -Count), y = Count)) + geom_bar(stat = 'identity',fill='cornflowerblue',color='black')+
+  coord_flip()+
+  labs(x = 'Count', y = 'Genres')
+
+```
+
+There are 35 unique genres in the data set. Looks like hotstar has maximum video content on Cricket or we can say hotstar users watch cricket a lot, which is followed by Drama, Romance, Reality. Based on watch behaviour, I think we can safely assume that mode segment of hotstar users is relatively young i.e. 16-25 years
+It will be better if we confirm our hypothesis. Let's check the mean segment value by genres. This will help us understand the behaviour of users belonging to pos, neg class.
+
+
+```{r}
+genreData <- data.table(ID = rep(train_data$ID, lapply(train_data$gen1, length)), segment = rep(train_data$segment, lapply(train_data$gen1, length)), Genres = unlist(train_data$gen1))
+
+ggplot(genreData, aes(x = reorder(Genres, -segment), y = segment))+
+  stat_summary(fun.y = "mean", geom = "bar", color="black",fill="#FF6666")+
+  coord_flip()+
+  labs(x = 'segment',y = 'genres')
+
+
+```
+
+Wow! We see that majority of the people belonging to pos segment watch Family, Romance, Teen shows. Redefining our previous hypothesis, now we can safely assume that pos segment consists of people falling in 18 - 35 age group. 
+Let's check titles now.
+
+```{r}
+train_data[,g2 := lapply(titles, function(k) strsplit(x = k, split = ","))]
+train_data[,g2 := lapply(g2, unlist, use.names=F)]
+train_data[,g2 := lapply(g2, function(k) str_replace_all(string = k, pattern = "(\\:\\d+)$",replacement = ""))]
+
+shows <- table(unlist(train_data$g2))
+shows <- as.data.table(shows)
+setnames(shows, c("V1","N"), c("Name","Count"))
+
+shows[, Count := sort(Count, decreasing = T)]
+show_sub <- shows[1:50]
+
+ggplot(show_sub, aes(x = Name, y = Count)) + geom_bar(stat = 'identity',fill='tomato',color='black')+
+  labs(x = 'Count', y = 'Shows', Title = 'Frequency of Titles')+
+  coord_flip()+
+  theme_minimal()
+
+
+```
+
+There are 13,294 videos on Hotstar. We have plotted only top 50.
+The most popular video belong to Cricket genre when 'Finch drills Boult'. Rest of the following videos also belong to genre Cricket. 
+
+Now, let's see from which city does hotstar viewers come!
+
+```{r}
+train_data[, g3 := lapply(cities, function(k) strsplit(x = k, split = ","))]
+train_data[,g3 := lapply(g3, unlist, use.names=F)]
+
+train_data[, g3 := lapply(g3, function(k) str_replace_all(string = k, pattern = "(\\:\\d+)$",replacement = ""))]
+head(train_data$g3)
+
+train_data[, g3 := lapply(g3, function(k) str_replace_all(string = k, pattern = "navi numbai", replacement = "mumbai"))]
+
+citiesTable <- table(unlist(train_data$g3))
+citiesTable <- as.data.table(citiesTable)
+setnames(citiesTable, c("V1","N"), c('Name','Count'))
+
+citiesTable[, Count := sort(Count, decreasing = T)]
+citiesTable <- citiesTable[1:50]
+
+ggplot(citiesTable, aes(x =Name, y = Count))+
+  geom_bar(stat = 'identity', color = 'black', fill='chartreuse4')+
+  coord_flip()
+
+
+```
+
+
+Based on statistics above about hotstar users i.e. they are cricket addicts. The cities have a different story to tell. Maximum users come from amman (city in Jordon), followed by aachen (city in Germany), then a city from Denmark, Ivory Coast, US etc. 
+Surprising to see, cities like Agra and Agartala appearing on this list. 
+I was expecting users from indian citiesto dominate this video hosting website. Looks like, it's one of the favorite destination of indians living abroad.  
+
+Let's proceed and understand on which days do these users come to watch videos.
+
+```{r}
+train_data[,g4 := lapply(dow, function(k) strsplit(x = k, split = ","))]
+train_data[,g4 := lapply(g4, unlist, use.names =F)]
+
+train_data[, g4 := lapply(g4, function(k) str_replace_all(string = k, pattern = "(\\:\\d+)$",replacement = ""))]
+
+dowTable <- table(unlist(train_data$g4))
+dowTable <- as.data.table(dowTable)
+setnames(dowTable,c("V1","N"),c("Days","Count"))
+
+ggplot(dowTable,aes(x = Days, y = Count))+geom_bar(stat = 'identity', color='black', fill='#FF6666')
+
+```
+
+Not much variation in week days. May be hours will be more interesting to look at. 
+
+```{r}
+train_data[,g5 := lapply(tod, function(k) strsplit(x = k, split = ","))]
+train_data[,g5 := lapply(g5, unlist, use.names =F)]
+
+train_data[, g5 := lapply(g5, function(k) str_replace_all(string = k, pattern = "(\\:\\d+)$",replacement = ""))]
+
+todTable <- table(unlist(train_data$g5))
+todTable <- as.data.table(todTable)
+setnames(todTable,c("V1","N"),c("Hour","Count"))
+todTable[,Hour := as.integer(Hour)]
+
+ggplot(todTable,aes(x = reorder(Hour, Hour), y = Count))+
+  geom_bar(stat = 'identity', color='black', fill='#FF9999')+
+  coord_flip()
+
+```
+
+Nothing surprising according to the nature of indians. Peak occurs at 9pm and start declining as night dawns. Let's check the mean of target variable by hour.
+
+```{r}
+hourTarget <- data.table(segment = rep(train_data$segment, lapply(train_data$g5, length)), hour = as.integer(unlist(train_data$g5)))
+
+ggplot(hourTarget, aes(x = reorder(hour,hour), y = segment))+
+  stat_summary(fun.y = "mean", geom = "bar",color="black",fill= "#33CCFF")+
+  coord_flip()+
+  labs(x = 'segment',y = 'hour')
+
+```
+
+Even though we saw above that pos segment consists of people who mainly watch family, romantic, teen related shows. But this statistics reveals weird behaviour. It says, most of the people from pos segment watch shows at midnight.
+But what could they possibly watch ? 
+
+Let's see!
+
+```{r}
+hourGenre <- data.table(genre = rep(unlist(train_data$gen1), lapply(train_data$g5, length)), hour = unlist(train_data$g5))
+
+hourGenreD <- data.table(hour = rep(hourGenre$hour, lapply(hourGenre$genre, length)),genre = unlist(hourGenre$genre))
+hourGenreD[,hour := as.integer(hour)]
+head(hourGenreD)
+
+ggplot(hourGenreD,aes(x = reorder(genre,hour), y = hour))+
+  stat_summary(fun.y = "mean", geom='bar',color='black',fill='#FF9933')+
+  coord_flip()
+
+```
+
+Sports! They watch sports related shows as the night dawns. Also, they tune in watching Live Shows at night. 
+
+## Summary
+This notebook is created to help you understand the nature of this data set. Since is data isn't as structured as you would expect, this exploration notebook might provide you useful ideas to create new features. Good luck for the competition!  
+
+
+
+
+
+
+
+
