@@ -145,7 +145,7 @@ citiesTable <- table(unlist(train_data$g3))
 citiesTable <- as.data.table(citiesTable)
 setnames(citiesTable, c("V1","N"), c('Name','Count'))
 
-citiesTable[, Count := sort(Count, decreasing = T)]
+citiesTable <- citiesTable[order(-Count)]
 citiesTable <- citiesTable[1:50]
 
 ggplot(citiesTable, aes(x =Name, y = Count))+
@@ -154,11 +154,7 @@ ggplot(citiesTable, aes(x =Name, y = Count))+
 
 
 ```
-
-
-Based on statistics above about hotstar users i.e. they are cricket addicts. The cities have a different story to tell. Maximum users come from amman (city in Jordon), followed by aachen (city in Germany), then a city from Denmark, Ivory Coast, US etc. 
-Surprising to see, cities like Agra and Agartala appearing on this list. 
-I was expecting users from indian citiesto dominate this video hosting website. Looks like, it's one of the favorite destination of indians living abroad.  
+Based on statistics above about hotstar users i.e. they are cricket addicts. Most of these users, come from Mumbai followed by Delhi, Bangalore, Gurgaon, Chennai etc.
 
 Let's proceed and understand on which days do these users come to watch videos.
 
