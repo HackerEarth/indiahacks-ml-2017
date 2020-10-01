@@ -1,4 +1,4 @@
-# IndiaHacks-ML-2017
+# IndiaHacks-ML-2017 - An Epitome of Success
 
 This repository will be updated with all reference scripts to help participants learn and improve their knowledge during India Hacks 2017. You can also contribute by sending your scripts to machinelearning@hackerearth.com. Our team will showcase your scripts on the respective problem page under scripts section.
 
